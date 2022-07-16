@@ -184,3 +184,25 @@
   (try (patp->biginteger s)
        true
        (catch Exception _ false)))
+
+(defn biginteger->patq [bn]
+  (if (zero? bn)
+    "~zod"
+    (let [bs (map (fn [e] (java.lang.Byte/toUnsignedInt e))
+                  (drop-while zero? (.toByteArray (biginteger bn))))
+          chunked (if (and (not= 0 (mod (count bs) 2)) (> (count bs) 1))
+                    (concat [[(first bs)]] (partition 2 (drop 1 bs)))
+                    (partition 2 2 nil bs))
+          prefix-name (fn [byts]
+                        (if (= 1 (count byts))
+                          (str (nth prefixes 0) (nth suffixes (nth byts 0)))
+                          (str (nth prefixes (nth byts 0)) (nth suffixes (nth byts 1)))))
+          name (fn [byts]
+                 (if (= 1 (count byts))
+                   (nth suffixes (nth byts 0))
+                   (str (nth prefixes (nth byts 0)) (nth suffixes (nth byts 1)))))
+          alg (fn [pair]
+                (if (and (not= 0 (mod (count pair) 2)) (> (count chunked) 1))
+                  (prefix-name pair)
+                  (name pair)))]
+      (reduce (fn [acc e] (str acc (if (= acc "~") "" "-") (alg e))) "~" chunked))))
